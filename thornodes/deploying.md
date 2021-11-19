@@ -132,6 +132,55 @@ Get real-world blockheights on the external blockchain explorers, eg:
 [https://explorer.binance.org/](https://explorer.binance.org/)
 {% endhint %}
 
+## Restoring node after disaster
+
+There is possible disaster case scenario for:
+* Accidental node destruction
+* Hardware or service failure / corruption
+* Cloud provider account blocking
+* etc
+- events preventing active node work and requiring to rebuild same node ASAP, possibly on different cloud provider.
+
+### Prepare yourself to disaster
+
+To rebuild same node, you need to restore k8s secret, containing node vault mnemonic. Simplest way is to export this secret to file and store it safe.
+```text
+kubectl get secret thornode-mnemonic -n thornode-testnet -o yaml > mnemonic_secret.yaml
+```
+
+If you didn't do that while node is healthy and reachable, but have dumped mnemonic (via `make mnenonic` command), you can make yaml file manually. Use this as a sample:
+```text
+apiVersion: v1
+data:
+  mnemonic: Z2F1Z2UgYnJpY2sgb3JpZW50IHJhcGlkIHRyYWRlIHNoaWVsZCBnaXJsIHVnbHkgZ2VudGxlIGRhcmluZyBzcG9pbCBjdXRlIGRlc3Ryb3kgaW5jb21lIGVtcGxveSBjZWlsaW5nIHJlZ3JldCBpbmZhbnQgZmlndXJlIHVuYXdhcmUgdW5pZm9ybSBraXRjaGVuIHN3YW1wIG51dA==
+kind: Secret
+metadata:
+  creationTimestamp: "2021-11-15T07:57:02Z"
+  name: thornode-mnemonic
+  namespace: thornode
+  resourceVersion: "3920"
+  uid: 6cfa8a22-a8b5-4446-9d7c-8b97168296da
+type: Opaque
+```
+Fields creationTimestamp, resourceVersion and uid can have any valid value, but mnemonic is a base64-encoded string your node's mnemonic. You can generate it by command
+```text
+echo -n "gauge brick orient rapid trade shield girl ugly gentle daring spoil cute destroy income employ ceiling regret infant figure unaware uniform kitchen swamp nut" | base64 -w0
+```
+Of course, use your mnemonic instead of example. Paste encoded string in a file, and you ready to restore your node. Remember to save this file safe, as it containing mnemonic for your node's vault!
+
+### Restoring node using a mnemonic secret
+
+After spinning a new cluster, first create some k8s stuff. You need to create namespace where will be saved secret:
+```text
+kubectl create namespace thornode
+```
+
+Now use you secret file to create s k8s secret:
+```text
+kubectl apply -f mnemonic_secret.yaml
+```
+Now, go to normal validator install procedure and wait for a sync. After your new thornode catch a sync to the tip, last thing will be broadcasting new IP address to the network, run `make set-ip-address` from node-launcher repo folder.
+
 ## CHART SUMMARY
 
 #### THORNode full stack umbrella chart
